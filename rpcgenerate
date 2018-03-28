@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import json
+import argparse
+import subprocess
+
+parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
+parser.add_argument('idl_file', nargs='+')
+args = parser.parse_args()
+
+for f in args.idl_file:
+    if not os.access(f, os.R_OK):
+        raise Exception
+    ps = subprocess.Popen(('./idl_to_json', f), stdout=subprocess.PIPE)
+    parsed_data = json.loads(ps.stdout.read())
+    # TODO: the work
