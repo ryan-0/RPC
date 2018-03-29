@@ -6,6 +6,9 @@ import json
 import argparse
 import subprocess
 
+proxy_ext = ".proxy.cpp"
+stub_ext = ".stub.cpp"
+
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
 args = parser.parse_args()
@@ -13,6 +16,12 @@ args = parser.parse_args()
 for f in args.idl_file:
     if not os.access(f, os.R_OK):
         raise Exception
-    ps = subprocess.Popen(('./idl_to_json', f), stdout=subprocess.PIPE)
-    parsed_data = json.loads(ps.stdout.read())
+
+    # create and open the stub and proxy program files
+    filename, extension = os.path.splitext(f) 
+    with open(filename + proxy_ext, "w+") as proxy, open(filename + stub_ext, "w+") as stub:
+        # generate the json and parse it
+        ps = subprocess.Popen(('./idl_to_json', f), stdout=subprocess.PIPE)
+        parsed_data = json.loads(ps.stdout.read())
+        print parsed_data
     # TODO: the work
