@@ -3,25 +3,44 @@
 import os
 import sys
 import json
+import pprint
 import argparse
 import subprocess
 
 proxy_ext = ".proxy.cpp"
 stub_ext = ".stub.cpp"
+includes = '#include <cstdio>\n' + \
+           '#include <cstring>\n' + \
+           '#include "c150debug.h"\n' + \
+           'using namespace C150NETWORK;\n'
 
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
 args = parser.parse_args()
 
 for f in args.idl_file:
+    if not os.path.isfile(f):
+        sys.stderr.write("Path %s does not designate a file" % f)
+        raise "No file named " + f
     if not os.access(f, os.R_OK):
-        raise Exception
+        sys.stderr.write("File %s is not readable" % f)
+        raise "File " + f + " not readable"
 
     # create and open the stub and proxy program files
     filename, extension = os.path.splitext(f) 
     with open(filename + proxy_ext, "w+") as proxy, open(filename + stub_ext, "w+") as stub:
         # generate the json and parse it
-        ps = subprocess.Popen(('./idl_to_json', f), stdout=subprocess.PIPE)
-        parsed_data = json.loads(ps.stdout.read())
-        print parsed_data
-    # TODO: the work
+        declarations = json.loads(subprocess.check_output(('./idl_to_json', f)))
+        pprint.pprint(declarations)
+
+        # write some intitial includes
+        proxy.write('#include "%s"\n' % f)
+        stub.write('#include "%s"\n' % f)
+        proxy.write('#include "rpcproxyhelper.h"\n')
+        stub.write('#include "rpcstubhelper.h"\n')
+        proxy.write(includes)
+        stub.write(includes)
+
+        # TODO: the work
+        for func in declarations['functions'].iteritems():
+            print func
