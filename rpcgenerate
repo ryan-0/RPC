@@ -9,10 +9,12 @@ import subprocess
 
 proxy_ext = ".proxy.cpp"
 stub_ext = ".stub.cpp"
-includes = '#include <cstdio>\n' + \
-           '#include <cstring>\n' + \
-           '#include "c150debug.h"\n' + \
-           'using namespace C150NETWORK;\n\n'
+includes = """
+#include <cstdio>
+#include <cstring>
+#include "c150debug.h"           
+using namespace C150NETWORK;
+"""
 proxy_setup = """
     c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invoked");
     RPCPROXYSOCKET->write("{func_name}", strlen("{func_name}")+1);
