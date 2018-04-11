@@ -12,7 +12,13 @@ stub_ext = ".stub.cpp"
 includes = '#include <cstdio>\n' + \
            '#include <cstring>\n' + \
            '#include "c150debug.h"\n' + \
-           'using namespace C150NETWORK;\n'
+           'using namespace C150NETWORK;\n\n'
+proxy_setup = """
+    c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invoked");
+    RPCPROXYSOCKET->write("{func_name}", strlen("{func_name}")+1);
+    c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invocation sent, waiting for response");
+    RPCPROXYSOCKET->read(readBuffer, sizeof(readBuffer));
+"""
 
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
@@ -28,6 +34,7 @@ for f in args.idl_file:
 
     # create and open the stub and proxy program files
     filename, extension = os.path.splitext(f) 
+
     with open(filename + proxy_ext, "w+") as proxy, open(filename + stub_ext, "w+") as stub:
         # generate the json and parse it
         declarations = json.loads(subprocess.check_output(('./idl_to_json', f)))
@@ -41,6 +48,20 @@ for f in args.idl_file:
         proxy.write(includes)
         stub.write(includes)
 
-        # TODO: the work
-        for func in declarations['functions'].iteritems():
-            print func
+        for func, signature in declarations['functions'].iteritems():
+            proxy.write(signature['return_type'] + " " +  func + "(")
+            nargs = len(signature['arguments'])
+            for i, arg in enumerate(signature['arguments']):
+                if arg['name'].startswith('__'):
+                    print "got something"
+                else:
+                    proxy.write(arg['type'] + " " + arg['name'] )
+
+                # output comma separator unless at last argument  
+                if i < nargs - 1:
+                    proxy.write(', ')
+            proxy.write(') {\n')
+            # TODO: serialize parameters and send to stub
+            proxy.write(proxy_setup.format(proxy_file=filename + proxy_ext, func_name=func))
+
+            proxy.write('}\n')
