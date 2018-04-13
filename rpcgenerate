@@ -12,9 +12,11 @@ stub_ext = ".stub.cpp"
 includes = """
 #include <cstdio>
 #include <cstring>
-#include "c150debug.h"           
+#include "c150debug.h"
 using namespace C150NETWORK;
+
 """
+
 proxy_setup = """
     c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invoked");
     RPCPROXYSOCKET->write("{func_name}", strlen("{func_name}")+1);
@@ -63,7 +65,10 @@ for f in args.idl_file:
                 if i < nargs - 1:
                     proxy.write(', ')
             proxy.write(') {\n')
-            # TODO: serialize parameters and send to stub
             proxy.write(proxy_setup.format(proxy_file=filename + proxy_ext, func_name=func))
 
+            # TODO: serialize parameters and send to stub
+
+            if signature['return_type'] != 'void':
+                proxy.write('    return <ANSWER>;\n')
             proxy.write('}\n')
