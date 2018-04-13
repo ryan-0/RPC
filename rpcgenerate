@@ -117,6 +117,18 @@ parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL
 parser.add_argument('idl_file', nargs='+')
 args = parser.parse_args()
 
+def render_arg(arg, declarations):
+    arg_name = arg['name']
+    arg_type = arg['type']
+    
+    if declarations['types'][arg['type']]['type_of_type'] != 'array':
+        return arg_type, arg_name
+    while declarations['types'][arg_type]['type_of_type'] == 'array':
+        arg_name += "[%s]" % declarations['types'][arg_type]['element_count']
+        arg_type = declarations['types'][arg_type]['member_type']
+    return arg_type, arg_name
+    
+
 for f in args.idl_file:
     if not os.path.isfile(f):
         sys.stderr.write("Path %s does not designate a file" % f)
@@ -149,8 +161,8 @@ for f in args.idl_file:
                 if arg['name'].startswith('__'):
                     print "got something"
                 else:
-                    proxy.write(arg['type'] + " " + arg['name'] )
-                    stub.write(arg['type'] + " " + arg['name'] )
+                    arg_type, arg_name = render_arg(arg, declarations)
+                    proxy.write(arg_type + " " + arg_name)
 
                 # output comma separator unless at last argument  
                 if i < nargs - 1:
