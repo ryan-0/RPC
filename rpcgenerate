@@ -16,13 +16,102 @@ includes = """
 using namespace C150NETWORK;
 
 """
-
 proxy_setup = """
     c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invoked");
-    RPCPROXYSOCKET->write("{func_name}", strlen("{func_name}")+1);
+    RPCSTUBSOCKET->write("{func_name}", strlen("{func_name}")+1);
     c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invocation sent, waiting for response");
     RPCPROXYSOCKET->read(readBuffer, sizeof(readBuffer));
 """
+
+stub_setup = """
+    //char doneBuffer[5] = "DONE";
+    c150debug->printf(C150RPCDEBUG,"{stub_file}: invoking {func_name}()");
+    """
+
+stub_write_to_socket = """
+    c150debug->printf(C150RPCDEBUG,"{stub_file}: returned from {func_name}() -- responding to client");
+    RPCSTUBSOCKET->write(doneBuffer, sizeof(doneBuffer));
+"""
+
+stub_badFunction = """
+    void __badFunction(char *{func_name}) {
+      char doneBuffer[5] = "BAD";  // to write magic value DONE + null
+      c150debug->printf(C150RPCDEBUG,"{stub_file}: received call for nonexistent function %s()",{func_name}});
+      RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
+}
+"""
+
+stub_getFunctionNameFromStream = """
+void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
+  unsigned int i;
+  char *bufp;
+  bool readnull;
+  ssize_t readlen;  
+  //
+  // Read a message from the stream
+  // -1 in size below is to leave room for null
+  //
+  readnull = false;
+  bufp = buffer;
+  for (i=0; i< bufSize; i++) {
+    readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
+    // check for eof or error
+    if (readlen == 0) {
+      break;
+    }
+    // check for null and bump buffer pointer
+    if (*bufp++ == '\0') {
+      readnull = true;
+      break;
+    }
+  }
+  if (readlen == 0) {
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub: read zero length message, checking EOF");
+    if (RPCSTUBSOCKET-> eof()) {
+      c150debug->printf(C150RPCDEBUG,"simplefunction.stub: EOF signaled on input");
+
+    } else {
+      throw C150Exception("simplefunction.stub: unexpected zero length read without eof");
+    }
+  }
+  else if(!readnull) 
+    throw C150Exception("simplefunction.stub: method name not null terminated or too long");
+}
+"""
+
+stub_dispatchFunction = """
+void dispatchFunction() {
+  char functionNameBuffer[50];
+  getFunctionNameFromStream(functionNameBuffer,sizeof(functionNameBuffer));
+  if (!RPCSTUBSOCKET-> eof()) {
+"""
+
+def stub_boilerplate(declarations): 
+        stub.write(stub_dispatchFunction);
+        for i,(func,signature) in enumerate(declarations.iteritems()):
+            stub.write("\t\tif (strcmp(functionNameBuffer,\"") if (i == 0) else  stub.write("\t\telse if (strcmp(functionNameBuffer,\"") 
+            stub.write(func+"\") == 0)\n")
+            stub.write("\t\t\t_"+func+ "(")
+            nargs = len(signature['arguments'])
+            for i, arg in enumerate(signature['arguments']):
+                if arg['name'].startswith('__'):
+                    print "got something"
+                else:
+                    stub.write(arg['name'])
+                # output comma separator unless at last argument  
+                if i < nargs - 1:
+                    stub.write(', ')
+            stub.write(");\n")
+        stub.write(
+            """\t\telse
+            __badFunction(functionNameBuffer);
+    }
+}""")
+
+
+        #stub.write(stub_badFunction.format(stub_file=filename + stub_ext, func_name=func))
+        stub.write(stub_getFunctionNameFromStream)
+
 
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
@@ -51,24 +140,45 @@ for f in args.idl_file:
         stub.write('#include "rpcstubhelper.h"\n')
         proxy.write(includes)
         stub.write(includes)
-
+        stub.write('void getFunctionNamefromStream();\n')
         for func, signature in declarations['functions'].iteritems():
             proxy.write(signature['return_type'] + " " +  func + "(")
+            stub.write(signature['return_type'] + " _" +  func + "(")
             nargs = len(signature['arguments'])
             for i, arg in enumerate(signature['arguments']):
                 if arg['name'].startswith('__'):
                     print "got something"
                 else:
                     proxy.write(arg['type'] + " " + arg['name'] )
+                    stub.write(arg['type'] + " " + arg['name'] )
 
                 # output comma separator unless at last argument  
                 if i < nargs - 1:
                     proxy.write(', ')
+                    stub.write(', ')
             proxy.write(') {\n')
+            stub.write(') {\n')
             proxy.write(proxy_setup.format(proxy_file=filename + proxy_ext, func_name=func))
+            stub.write(stub_setup.format(stub_file=filename + stub_ext, func_name=func))
+            stub.write(func+ "(")
+            nargs = len(signature['arguments'])
+            for i, arg in enumerate(signature['arguments']):
+                if arg['name'].startswith('__'):
+                    print "got something"
+                else:
+                    stub.write(arg['name'] )
+                # output comma separator unless at last argument  
+                if i < nargs - 1:
+                    stub.write(', ')
+            stub.write(");\n")
+            stub.write(stub_write_to_socket.format(stub_file=filename + stub_ext, func_name=func))
+            
 
             # TODO: serialize parameters and send to stub
 
             if signature['return_type'] != 'void':
                 proxy.write('    return <ANSWER>;\n')
+                stub.write('    return <ANSWER>;\n')
             proxy.write('}\n')
+            stub.write('}\n')
+        stub_boilerplate(declarations['functions'])
