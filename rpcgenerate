@@ -153,16 +153,29 @@ for f in args.idl_file:
         proxy.write(includes)
         stub.write(includes)
         stub.write('void getFunctionNamefromStream();\n')
+
+        # write out a serialize function for each type that is not built-in
+        #import code
+        #code.interact(local=locals())
+
+        for t, data in declarations['types'].iteritems():
+            if data['type_of_type'] == 'array':
+                # write a serialize function for this array type
+                arg_type, arg_name = render_arg({"name": "x", "type": t}, declarations)
+                proxy.write("string serialize(%s %s);\n" % (arg_type, arg_name))
+            elif data['type_of_type'] == 'struct':
+                proxy.write("string serialize(struct %s x);\n" % t)
+            elif data['type_of_type'] == 'builtin':
+                continue
+
         for func, signature in declarations['functions'].iteritems():
             proxy.write(signature['return_type'] + " " +  func + "(")
             stub.write(signature['return_type'] + " _" +  func + "(")
             nargs = len(signature['arguments'])
             for i, arg in enumerate(signature['arguments']):
-                if arg['name'].startswith('__'):
-                    print "got something"
-                else:
-                    arg_type, arg_name = render_arg(arg, declarations)
-                    proxy.write(arg_type + " " + arg_name)
+                arg_type, arg_name = render_arg(arg, declarations)
+                proxy.write(arg_type + " " + arg_name)
+                stub.write(arg_type + " " + arg_name)
 
                 # output comma separator unless at last argument  
                 if i < nargs - 1:
@@ -193,4 +206,21 @@ for f in args.idl_file:
                 stub.write('    return <ANSWER>;\n')
             proxy.write('}\n')
             stub.write('}\n')
+        for t, data in declarations['types'].iteritems():
+            if data['type_of_type'] == 'array':
+                # write a serialize function for this array type
+                arg_type, arg_name = render_arg({"name": "x", "type": t}, declarations)
+                proxy.write("string serialize(%s %s) {\n" % (arg_type, arg_name))
+                proxy.write('\ts = "[";\n')
+                proxy.write("\tfor (int i = 0; i < %s; i++) {\n" % data['element_count'])
+                proxy.write("\t\ts += serialize(x[i]);")
+                #proxy.write("\t\t")
+                proxy.write("\t\n\t}\n")
+                proxy.write('\ts += "]";\n')
+                proxy.write('\treturn s;\n')
+                proxy.write("}\n")
+            elif data['type_of_type'] == 'struct':
+                proxy.write("string serialize(struct %s x);\n" % t)
+            elif data['type_of_type'] == 'builtin':
+                continue
         stub_boilerplate(declarations['functions'])
