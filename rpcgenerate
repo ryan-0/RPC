@@ -3,25 +3,13 @@
 import os
 import sys
 import json
+import jinja2
 import pprint
 import argparse
 import subprocess
 
 proxy_ext = ".proxy.cpp"
 stub_ext = ".stub.cpp"
-includes = """
-#include <cstdio>
-#include <cstring>
-#include "c150debug.h"
-using namespace C150NETWORK;
-
-"""
-proxy_setup = """
-    c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invoked");
-    RPCSTUBSOCKET->write("{func_name}", strlen("{func_name}")+1);
-    c150debug->printf(C150RPCDEBUG,"{proxy_file}: {func_name}() invocation sent, waiting for response");
-    RPCPROXYSOCKET->read(readBuffer, sizeof(readBuffer));
-"""
 
 stub_setup = """
     //char doneBuffer[5] = "DONE";
@@ -113,21 +101,33 @@ def stub_boilerplate(declarations):
         stub.write(stub_getFunctionNameFromStream)
 
 
+def render_param(param, types):
+    param_name = param['name']
+    param_type = param['type']
+    
+    while types[param_type]['type_of_type'] == 'array':
+        param_name += "[{}]".format(types[param_type]['element_count'])
+        param_type = types[param_type]['member_type']
+    return "{} {}".format(param_type, param_name)
+
+def escape_declaration(s):
+    return s.replace('[', '_').replace(']', '_')
+
+def unique(iterable):
+    return set(iterable)
+
+def builtin(type_tup):
+    return type_tup[1]['type_of_type'] == 'builtin'
+
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
 args = parser.parse_args()
 
-def render_arg(arg, declarations):
-    arg_name = arg['name']
-    arg_type = arg['type']
-    
-    if declarations['types'][arg['type']]['type_of_type'] != 'array':
-        return arg_type, arg_name
-    while declarations['types'][arg_type]['type_of_type'] == 'array':
-        arg_name += "[%s]" % declarations['types'][arg_type]['element_count']
-        arg_type = declarations['types'][arg_type]['member_type']
-    return arg_type, arg_name
-    
+env = jinja2.Environment(loader=jinja2.FileSystemLoader('.'))
+env.filters['render_param'] = render_param
+env.filters['escape_declaration'] = escape_declaration
+env.filters['unique'] = unique
+env.tests['builtin'] = builtin
 
 for f in args.idl_file:
     if not os.path.isfile(f):
@@ -141,49 +141,40 @@ for f in args.idl_file:
     filename, extension = os.path.splitext(f) 
 
     with open(filename + proxy_ext, "w+") as proxy, open(filename + stub_ext, "w+") as stub:
-        # generate the json and parse it
         declarations = json.loads(subprocess.check_output(('./idl_to_json', f)))
-        pprint.pprint(declarations)
+        return_types = {f['return_type']: declarations['types'][f['return_type']] for f in declarations['functions'].values()}
+        template = env.get_template("proxy_template.cpp")
+        proxy.write(template.render(
+            funcs = declarations['functions'],
+            types = declarations['types'],
+            return_types = return_types,
+            filename = filename
+        ))
 
         # write some intitial includes
-        proxy.write('#include "%s"\n' % f)
+        #stub.write(includes)
         stub.write('#include "%s"\n' % f)
-        proxy.write('#include "rpcproxyhelper.h"\n')
         stub.write('#include "rpcstubhelper.h"\n')
-        proxy.write(includes)
-        stub.write(includes)
         stub.write('void getFunctionNamefromStream();\n')
 
-        # write out a serialize function for each type that is not built-in
-        #import code
-        #code.interact(local=locals())
 
-        for t, data in declarations['types'].iteritems():
-            if data['type_of_type'] == 'array':
-                # write a serialize function for this array type
-                arg_type, arg_name = render_arg({"name": "x", "type": t}, declarations)
-                proxy.write("string serialize(%s %s);\n" % (arg_type, arg_name))
-            elif data['type_of_type'] == 'struct':
-                proxy.write("string serialize(struct %s x);\n" % t)
-            elif data['type_of_type'] == 'builtin':
-                continue
+        # figure out what non-builtins are return types
+        return_types = []
+        for func, data in declarations['functions'].iteritems():
+            if declarations['types'][data['return_type']]['type_of_type'] != 'builtin':
+                return_types.append(data['return_type'])
 
         for func, signature in declarations['functions'].iteritems():
-            proxy.write(signature['return_type'] + " " +  func + "(")
             stub.write(signature['return_type'] + " _" +  func + "(")
             nargs = len(signature['arguments'])
             for i, arg in enumerate(signature['arguments']):
-                arg_type, arg_name = render_arg(arg, declarations)
-                proxy.write(arg_type + " " + arg_name)
-                stub.write(arg_type + " " + arg_name)
+                s = render_param(arg, declarations)
+                stub.write(s)
 
                 # output comma separator unless at last argument  
                 if i < nargs - 1:
-                    proxy.write(', ')
                     stub.write(', ')
-            proxy.write(') {\n')
             stub.write(') {\n')
-            proxy.write(proxy_setup.format(proxy_file=filename + proxy_ext, func_name=func))
             stub.write(stub_setup.format(stub_file=filename + stub_ext, func_name=func))
             stub.write(func+ "(")
             nargs = len(signature['arguments'])
@@ -199,28 +190,7 @@ for f in args.idl_file:
             stub.write(stub_write_to_socket.format(stub_file=filename + stub_ext, func_name=func))
             
 
-            # TODO: serialize parameters and send to stub
-
             if signature['return_type'] != 'void':
-                proxy.write('    return <ANSWER>;\n')
-                stub.write('    return <ANSWER>;\n')
-            proxy.write('}\n')
+                stub.write('\treturn <ANSWER>;\n')
             stub.write('}\n')
-        for t, data in declarations['types'].iteritems():
-            if data['type_of_type'] == 'array':
-                # write a serialize function for this array type
-                arg_type, arg_name = render_arg({"name": "x", "type": t}, declarations)
-                proxy.write("string serialize(%s %s) {\n" % (arg_type, arg_name))
-                proxy.write('\ts = "[";\n')
-                proxy.write("\tfor (int i = 0; i < %s; i++) {\n" % data['element_count'])
-                proxy.write("\t\ts += serialize(x[i]);")
-                #proxy.write("\t\t")
-                proxy.write("\t\n\t}\n")
-                proxy.write('\ts += "]";\n')
-                proxy.write('\treturn s;\n')
-                proxy.write("}\n")
-            elif data['type_of_type'] == 'struct':
-                proxy.write("string serialize(struct %s x);\n" % t)
-            elif data['type_of_type'] == 'builtin':
-                continue
         stub_boilerplate(declarations['functions'])
