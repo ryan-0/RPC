@@ -1,6 +1,6 @@
 {%- extends 'base_template.cpp' %}
 
-{%- set purpose = 'proxy' %}
+{%- set agent = 'proxy' %}
 
 {% block declarations %}
 {% for t, _ in types.iteritems() | reject('builtin') %}

@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstring>
 #include "c150debug.h"
-#include "rpc{{ purpose }}helper.h"
+#include "rpc{{ agent }}helper.h"
 #include "{{ filename }}.idl"
 
 using namespace C150NETWORK;
