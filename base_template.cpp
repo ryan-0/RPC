@@ -6,49 +6,50 @@
 
 using namespace C150NETWORK;
 
-void get_next_param(char *buffer, unsigned int bufSize) {
-    unsigned int i, count = 0;
+void get_param(int i, char *buffer, unsigned int bufSize, string input) {
+    unsigned int count;
+    string::iterator it;
     char opener, closer, *bufp;
-    ssize_t readlen;  
 
-    // readnull = false;
-    bufp = buffer;
-
-    for (i = 0; i < bufSize; i++) {
-        readlen = RPCSTUBSOCKET->read(bufp, 1);
-        if (!count) {
-            count = 1;
-            switch (*bufp) {
-                case '{':
-                    opener = '{';
-                    closer = '}';
+    for (int j = 0; j <= i; j++) {
+        count = 0;
+        bufp = buffer;
+        for (it = input.begin(); it != input.end(); it++) {
+            // TODO: check if at end of buffer
+            *bufp = *it;
+            if (count) {
+                bufp++;
+                if (*bufp == opener) {
+                    count++;
+                } else if (*bufp == closer && count > 1) {
+                    count--;
+                } else if (*bufp == closer) {
+                    // overwrite last character to NULL-terminate the string
+                    *bufp = '\0';
                     break;
-                case '[':
-                    opener = '[';
-                    closer = ']';
-                    break;
-                case '(':
-                    opener = '(';
-                    closer = ')';
-                    break;
-                default:
-                    count = 0;
+                }
+            } else {
+                count = 1;
+                switch (*bufp) {
+                    case '{':
+                        opener = '{';
+                        closer = '}';
+                        break;
+                    case '[':
+                        opener = '[';
+                        closer = ']';
+                        break;
+                    case '(':
+                        opener = '(';
+                        closer = ')';
+                        break;
+                    default:
+                        count = 0;
+                }
             }
-        } else if (*bufp == opener) {
-            count++;
-        } else if (*bufp == closer) {
         }
-    } 
-
-    if (readlen == 0) {
-        c150debug->printf(C150RPCDEBUG,"simplefunction.stub: read zero length message, checking EOF");
-        if (RPCSTUBSOCKET-> eof()) {
-            c150debug->printf(C150RPCDEBUG,"simplefunction.stub: EOF signaled on input");
-        } else {
-            throw C150Exception("simplefunction.stub: unexpected zero length read without eof");
-        }
-    } else if (!readnull) {
-        throw C150Exception("simplefunction.stub: method name not null terminated or too long");
+        c150debug->printf(C150RPCDEBUG,"{{ filename }}.{{ agent }}: reached end of string");
+        throw C150Exception("{{ filename }}.{{ agent }}: unmatched brackets detected");
     }
 }
 
