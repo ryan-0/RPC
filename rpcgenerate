@@ -1,133 +1,28 @@
 #!/usr/bin/env python
 
-import os
-import sys
-import json
+import os, sys, json, argparse, subprocess
 import jinja2
-import pprint
-import argparse
-import subprocess
 
-proxy_ext = ".proxy.cpp"
-stub_ext = ".stub.cpp"
-
-stub_setup = """
-    //char doneBuffer[5] = "DONE";
-    c150debug->printf(C150RPCDEBUG,"{stub_file}: invoking {func_name}()");
-    """
-
-stub_write_to_socket = """
-    c150debug->printf(C150RPCDEBUG,"{stub_file}: returned from {func_name}() -- responding to client");
-    RPCSTUBSOCKET->write(doneBuffer, sizeof(doneBuffer));
-"""
-
-stub_badFunction = """
-    void __badFunction(char *{func_name}) {
-      char doneBuffer[5] = "BAD";  // to write magic value DONE + null
-      c150debug->printf(C150RPCDEBUG,"{stub_file}: received call for nonexistent function %s()",{func_name}});
-      RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
-}
-"""
-
-stub_getFunctionNameFromStream = """
-void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
-  unsigned int i;
-  char *bufp;
-  bool readnull;
-  ssize_t readlen;  
-  //
-  // Read a message from the stream
-  // -1 in size below is to leave room for null
-  //
-  readnull = false;
-  bufp = buffer;
-  for (i=0; i< bufSize; i++) {
-    readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
-    // check for eof or error
-    if (readlen == 0) {
-      break;
-    }
-    // check for null and bump buffer pointer
-    if (*bufp++ == '\0') {
-      readnull = true;
-      break;
-    }
-  }
-  if (readlen == 0) {
-    c150debug->printf(C150RPCDEBUG,"simplefunction.stub: read zero length message, checking EOF");
-    if (RPCSTUBSOCKET-> eof()) {
-      c150debug->printf(C150RPCDEBUG,"simplefunction.stub: EOF signaled on input");
-
-    } else {
-      throw C150Exception("simplefunction.stub: unexpected zero length read without eof");
-    }
-  }
-  else if(!readnull) 
-    throw C150Exception("simplefunction.stub: method name not null terminated or too long");
-}
-"""
-
-stub_dispatchFunction = """
-void dispatchFunction() {
-  char functionNameBuffer[50];
-  getFunctionNameFromStream(functionNameBuffer,sizeof(functionNameBuffer));
-  if (!RPCSTUBSOCKET-> eof()) {
-"""
-
-def stub_boilerplate(declarations): 
-        stub.write(stub_dispatchFunction);
-        for i,(func,signature) in enumerate(declarations.iteritems()):
-            stub.write("\t\tif (strcmp(functionNameBuffer,\"") if (i == 0) else  stub.write("\t\telse if (strcmp(functionNameBuffer,\"") 
-            stub.write(func+"\") == 0)\n")
-            stub.write("\t\t\t_"+func+ "(")
-            nargs = len(signature['arguments'])
-            for i, arg in enumerate(signature['arguments']):
-                if arg['name'].startswith('__'):
-                    print "got something"
-                else:
-                    stub.write(arg['name'])
-                # output comma separator unless at last argument  
-                if i < nargs - 1:
-                    stub.write(', ')
-            stub.write(");\n")
-        stub.write(
-            """\t\telse
-            __badFunction(functionNameBuffer);
-    }
-}""")
-
-
-        #stub.write(stub_badFunction.format(stub_file=filename + stub_ext, func_name=func))
-        stub.write(stub_getFunctionNameFromStream)
-
-
-def render_param(param, types):
-    param_name = param['name']
-    param_type = param['type']
-    
-    while types[param_type]['type_of_type'] == 'array':
-        param_name += "[{}]".format(types[param_type]['element_count'])
-        param_type = types[param_type]['member_type']
-    return "{} {}".format(param_type, param_name)
-
-def escape_declaration(s):
-    return s.replace('[', '_').replace(']', '_')
-
-def unique(iterable):
-    return set(iterable)
-
-def builtin(type_tup):
-    return type_tup[1]['type_of_type'] == 'builtin'
+PROXY_EXT = ".proxy.cpp"
+STUB_EXT = ".stub.cpp"
 
 parser = argparse.ArgumentParser(description='Generate proxies and stubs for IDL files')
 parser.add_argument('idl_file', nargs='+')
 args = parser.parse_args()
 
+def render_param(param, types):
+    param_name = param['name']
+    param_type = param['type']
+    while types[param_type]['type_of_type'] == 'array':
+        param_name += "[{}]".format(types[param_type]['element_count'])
+        param_type = types[param_type]['member_type']
+    return "{} {}".format(param_type, param_name)
+
 env = jinja2.Environment(loader=jinja2.FileSystemLoader('.'))
-env.filters['render_param'] = render_param
-env.filters['escape_declaration'] = escape_declaration
-env.filters['unique'] = unique
-env.tests['builtin'] = builtin
+env.filters['render_param']         = render_param
+env.filters['escape_declaration']   = lambda s: s.replace('[', '_').replace(']', '_')
+env.filters['unique']               = lambda l: set(l)
+env.tests['builtin']                = lambda type_tup: type_tup[1]['type_of_type'] == 'builtin'
 
 for f in args.idl_file:
     if not os.path.isfile(f):
@@ -137,60 +32,23 @@ for f in args.idl_file:
         sys.stderr.write("File %s is not readable" % f)
         raise "File " + f + " not readable"
 
-    # create and open the stub and proxy program files
     filename, extension = os.path.splitext(f) 
+    declarations = json.loads(subprocess.check_output(('./idl_to_json', f)))
+    return_types = {f['return_type']: declarations['types'][f['return_type']] for f in declarations['functions'].values()}
 
-    with open(filename + proxy_ext, "w+") as proxy, open(filename + stub_ext, "w+") as stub:
-        declarations = json.loads(subprocess.check_output(('./idl_to_json', f)))
-        return_types = {f['return_type']: declarations['types'][f['return_type']] for f in declarations['functions'].values()}
-        template = env.get_template("proxy_template.cpp")
-        proxy.write(template.render(
+    proxy_template = env.get_template("proxy_template.cpp")
+    stub_template = env.get_template("stub_template.cpp")
+
+    with open(filename + PROXY_EXT, "w+") as proxy, open(filename + STUB_EXT, "w+") as stub:
+        proxy.write(proxy_template.render(
             funcs = declarations['functions'],
             types = declarations['types'],
             return_types = return_types,
             filename = filename
         ))
-
-        # write some intitial includes
-        #stub.write(includes)
-        stub.write('#include "%s"\n' % f)
-        stub.write('#include "rpcstubhelper.h"\n')
-        stub.write('void getFunctionNamefromStream();\n')
-
-
-        # figure out what non-builtins are return types
-        return_types = []
-        for func, data in declarations['functions'].iteritems():
-            if declarations['types'][data['return_type']]['type_of_type'] != 'builtin':
-                return_types.append(data['return_type'])
-
-        for func, signature in declarations['functions'].iteritems():
-            stub.write(signature['return_type'] + " _" +  func + "(")
-            nargs = len(signature['arguments'])
-            for i, arg in enumerate(signature['arguments']):
-                s = render_param(arg, declarations)
-                stub.write(s)
-
-                # output comma separator unless at last argument  
-                if i < nargs - 1:
-                    stub.write(', ')
-            stub.write(') {\n')
-            stub.write(stub_setup.format(stub_file=filename + stub_ext, func_name=func))
-            stub.write(func+ "(")
-            nargs = len(signature['arguments'])
-            for i, arg in enumerate(signature['arguments']):
-                if arg['name'].startswith('__'):
-                    print "got something"
-                else:
-                    stub.write(arg['name'] )
-                # output comma separator unless at last argument  
-                if i < nargs - 1:
-                    stub.write(', ')
-            stub.write(");\n")
-            stub.write(stub_write_to_socket.format(stub_file=filename + stub_ext, func_name=func))
-            
-
-            if signature['return_type'] != 'void':
-                stub.write('\treturn <ANSWER>;\n')
-            stub.write('}\n')
-        stub_boilerplate(declarations['functions'])
+        stub.write(stub_template.render(
+            funcs = declarations['functions'],
+            types = declarations['types'],
+            return_types = return_types,
+            filename = filename
+        ))
