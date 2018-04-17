@@ -1,42 +1,17 @@
-#include <cstdio>
-#include <cstring>
-#include "c150debug.h"
-#include "rpcproxyhelper.h"
-#include "{{ filename }}.idl"
+{%- extends 'base_template.cpp' %}
 
-using namespace C150NETWORK;
+{%- set purpose = 'proxy' %}
 
-string serialize_float(float n) {
-    return to_string(n);
-}
-
-string serialize_int(int n) {
-    return to_string(n);
-}
-
-string serialize_string(string s) {
-    return s;
-}
-
-float deserialize_float(string s) {
-    return stof(s, NULL);
-}
-
-float deserialize_int(string s) {
-    return stoi(s, NULL);
-}
-
-string deserialize_string(string s) {
-    return s;
-}
-
+{% block declarations %}
 {% for t, _ in types.iteritems() | reject('builtin') %}
 string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | render_param(types) }});
 {%- endfor %}
 {%- for t, _ in return_types.iteritems() | reject('builtin') %}
 {{ t }} deserialize_{{ t | escape_declaration }}(string s);
 {%- endfor %}
+{% endblock %}
 
+{% block functions %}
 {% for f, signature in funcs.iteritems() %}
 {{ signature['return_type'] }} {{ f }}({{ signature['arguments'] | map('render_param', types) | join(', ') }}) {
     char readBuffer[1024];
@@ -63,7 +38,9 @@ string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | rend
     {%- endif %}
 }
 {% endfor %}
+{% endblock %}
 
+{% block definitions %}
 {% for name, definition in types.iteritems() | reject('builtin')  %}
 string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} | render_param(types) }}) {
     string s = "";
@@ -102,3 +79,4 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
     {%- endif %}
 }
 {%- endfor %}
+{% endblock %}

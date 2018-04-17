@@ -28,7 +28,7 @@ for f in args.idl_file:
     if not os.path.isfile(f):
         sys.stderr.write("Path %s does not designate a file" % f)
         raise "No file named " + f
-    if not os.access(f, os.R_OK):
+    elif not os.access(f, os.R_OK):
         sys.stderr.write("File %s is not readable" % f)
         raise "File " + f + " not readable"
 
