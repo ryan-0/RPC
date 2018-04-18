@@ -42,26 +42,6 @@ void __badFunction(char *functionName) {
     RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
 }
 
-void dispatchFunction() {
-    char functionNameBuffer[50];
-    getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
-
-    {%- for f, signature in funcs.iteritems() %} 
-    {%- if loop.first %}
-    if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
-    {%- else %}
-    } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
-    {%- endif %}
-        {%- for arg in signature['arguments'] %}
-        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}));
-        {%- endfor %}
-        __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
-    {%- endfor %}
-    } else {
-        __badFunction(functionNameBuffer);
-    }
-}
-
 void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
     unsigned int i;
     char *bufp;
@@ -91,6 +71,26 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
         }
     } else if (!readnull) {
         throw C150Exception("{{ filename }}.stub: method name not null terminated or too long");
+    }
+}
+
+void dispatchFunction() {
+    char functionNameBuffer[50];
+    getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
+
+    {%- for f, signature in funcs.iteritems() %} 
+    {%- if loop.first %}
+    if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    {%- else %}
+    } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    {%- endif %}
+        {%- for arg in signature['arguments'] %}
+        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}));
+        {%- endfor %}
+        __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
+    {%- endfor %}
+    } else {
+        __badFunction(functionNameBuffer);
     }
 }
 {% endblock %}
