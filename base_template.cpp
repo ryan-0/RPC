@@ -77,11 +77,56 @@ string deserialize_string(string s) {
     return s;
 }
 
-{% block declarations %}
-{% endblock %}
+{%- for t, _ in serializers.iteritems() | reject('builtin') %}
+string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | render_param(types) }});
+{%- endfor %}
+
+{%- for t, _ in deserializers.iteritems() | reject('builtin') %}
+{{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s);
+{%- endfor %}
 
 {% block functions %}
 {% endblock %}
 
 {% block definitions %}
 {% endblock %}
+
+{% for name, definition in serializers.iteritems() | reject('builtin' )%}
+string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} | render_param(types) }}) {
+    string s = "";
+    {%- if definition['type_of_type'] == 'array' %}
+    s += "[";
+    for (int i = 0; i < {{ definition['element_count'] }}; i++) {
+        s += serialize_{{ definition['member_type'] | escape_declaration }}(x[i]);
+        if (i < {{ definition['element_count'] | int - 1}}) {
+            s += ",";
+        }
+    }
+    s += "[";
+    {%- else %}
+    s += "{";
+    {%- for mem in definition['members'] %}
+    s += serialize_{{ mem['type'] | escape_declaration }}(x.{{ mem['name'] }});
+    {%- if not loop.last %}
+    s += ",";
+    {%- endif %}
+    {%- endfor %}
+    s += "}";
+    {%- endif %}
+    return s;
+}
+{% endfor %}
+
+{%- for t, definition in deserializers.iteritems() | reject('builtin') %}
+{{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s) {
+    {%- if definition['type_of_type'] == 'array' %}
+        {# TODO: handle case of  deserializing arbitrary array #}
+    {%- else %}
+    {{ t }} x;
+    {%- for mem in definition['members'] %}
+    x.{{ mem['name'] }} = deserialize_{{ mem['type'] | escape_declaration }}(s);
+    {%- endfor %}
+    return x;
+    {%- endif %}
+}
+{%- endfor %}
