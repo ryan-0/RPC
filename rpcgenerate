@@ -18,8 +18,16 @@ def render_param(param, types):
         param_type = types[param_type]['member_type']
     return "{} {}".format(param_type, param_name)
 
+def render_return_type(t, types):
+    follower = ""
+    while types[t]['type_of_type'] == 'array':
+        follower += "*"
+        t = types[t]['member_type']
+    return "{} {}".format(t, follower)
+
 env = jinja2.Environment(loader=jinja2.FileSystemLoader('.'))
 env.filters['render_param']         = render_param
+env.filters['render_return_type']         = render_return_type
 env.filters['escape_declaration']   = lambda s: s.replace('[', '_').replace(']', '_')
 env.filters['unique']               = lambda l: set(l)
 env.tests['builtin']                = lambda type_tup: type_tup[1]['type_of_type'] == 'builtin'
