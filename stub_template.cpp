@@ -52,16 +52,16 @@ void dispatchFunction() {
     {%- for f, signature in funcs.iteritems() %} 
         {%- if loop.first %}
         if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
-            {% for arg in signature['arguments'] %}
-            {{ {'name': '', 'type': t} | render_param(types) }} = deserialize_();
-            {% endfor %}
-            __{{ f }}();
+            {%- for arg in signature['arguments'] %}
+            {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}();
+            {%- endfor %}
+            __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
         {%- else %}
         } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
             {%- for arg in signature['arguments'] %}
-            {{ {'name': arg['name'], 'type': signature['return_type']} | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}();
+            {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}();
             {%- endfor %}
-            __{{ f }}();
+            __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
         {%- endif %}
     {%- endfor %}
         } else {
