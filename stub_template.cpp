@@ -10,7 +10,7 @@ string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | rend
 {%- endfor %}
 
 {%- for t, _ in types.iteritems() | reject('builtin') %}
-{{ {'name': '', 'type': t} | render_param(types) }}deserialize_{{ t | escape_declaration }}(string s);
+{{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s);
 {%- endfor %}
 
 {%- endblock %}
@@ -44,29 +44,21 @@ void __badFunction(char *functionName) {
 
 void dispatchFunction() {
     char functionNameBuffer[50];
-
-    // parse out function name
     getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
 
-    if (!RPCSTUBSOCKET-> eof()) {
     {%- for f, signature in funcs.iteritems() %} 
-        {%- if loop.first %}
-        if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
-            {%- for arg in signature['arguments'] %}
-            {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}();
-            {%- endfor %}
-            __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
-        {%- else %}
-        } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
-            {%- for arg in signature['arguments'] %}
-            {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}();
-            {%- endfor %}
-            __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
-        {%- endif %}
+    {%- if loop.first %}
+    if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    {%- else %}
+    } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    {%- endif %}
+        {%- for arg in signature['arguments'] %}
+        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}));
+        {%- endfor %}
+        __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
     {%- endfor %}
-        } else {
-            __badFunction(functionNameBuffer);
-        }
+    } else {
+        __badFunction(functionNameBuffer);
     }
 }
 
