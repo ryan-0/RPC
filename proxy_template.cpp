@@ -15,11 +15,12 @@ string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | rend
 {% for f, signature in funcs.iteritems() %}
 {{ signature['return_type'] }} {{ f }}({{ signature['arguments'] | map('render_param', types) | join(', ') }}) {
     char readBuffer[1024];
-    string payload = "{{ f }} ";
+    string payload = "{{ f }}";
     {%- for arg in signature['arguments'] %}
     payload += serialize_{{ arg['type'] | escape_declaration }}({{ arg['name'] }});
     {%- if not loop.last %}
-    payload += " ";
+    //this is where the extra space bug is coming from.x
+
     {%- endif %}
     {%- endfor %}
 

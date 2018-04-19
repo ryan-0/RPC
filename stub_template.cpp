@@ -52,6 +52,13 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
     bufp = buffer;
     for (i = 0; i < bufSize; i++) {
         readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
+
+
+        //added this to fix buffer bug
+        if(*bufp == ' '){
+            readnull = true;
+            break;
+        }
         // check for EOF or error
         if (readlen == 0) {
             break;
@@ -61,6 +68,7 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
             readnull = true;
             break;
         }
+
     }
     if (readlen == 0) {
         c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub: read zero length message, checking EOF");
@@ -76,16 +84,22 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
 
 void dispatchFunction() {
     char functionNameBuffer[50];
-    getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
+    char argsBuffer[1060];
 
+    getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
+    RPCSTUBSOCKET->read(argsBuffer,sizeof(argsBuffer));
+    string input(argsBuffer);
+    memset(argsBuffer, 0, sizeof(argsBuffer));
+    c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: THE FUNCTION NAME IS  %s()",functionNameBuffer);
     {%- for f, signature in funcs.iteritems() %} 
     {%- if loop.first %}
-    if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    //need to fix this extra space bug (its fixed, but space should be removed in the first place)
+    if (strcmp(functionNameBuffer, "{{ f }} ") == 0) {
     {%- else %}
-    } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
+    } else if (strcmp(functionNameBuffer, "{{ f}} ") == 0) {
     {%- endif %}
         {%- for arg in signature['arguments'] %}
-        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}));
+        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input));
         {%- endfor %}
         __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
     {%- endfor %}

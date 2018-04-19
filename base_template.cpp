@@ -6,7 +6,7 @@
 
 using namespace C150NETWORK;
 
-void get_param(int i, char *buffer, unsigned int bufSize, string input) {
+string get_param(int i, char *buffer, unsigned int bufSize, string input) {
     unsigned int count;
     string::iterator it;
     char opener, closer, *bufp;
@@ -49,8 +49,11 @@ void get_param(int i, char *buffer, unsigned int bufSize, string input) {
             }
         }
         c150debug->printf(C150RPCDEBUG,"{{ filename }}.{{ agent }}: reached end of string");
+        c150debug->printf(C150RPCDEBUG,"THE STRING BUFFER IS %s",string(buffer));
         throw C150Exception("{{ filename }}.{{ agent }}: unmatched brackets detected");
-    }
+        
+    } 
+    return string(buffer);
 }
 
 string serialize_float(float n) {
