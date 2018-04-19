@@ -10,58 +10,64 @@ string get_param(int i, char *buffer, unsigned int bufSize, string input) {
     unsigned int count;
     string::iterator it;
     char opener, closer, *bufp;
+    int j;
 
-    for (int j = 0; j <= i; j++) {
-        count = 0;
-        bufp = buffer;
-        for (it = input.begin(); it != input.end(); it++) {
-            // TODO: check if at end of buffer
-            *bufp = *it;
-            if (count) {
-                bufp++;
-                if (*bufp == opener) {
-                    count++;
-                } else if (*bufp == closer && count > 1) {
-                    count--;
-                } else if (*bufp == closer) {
-                    // overwrite last character to NULL-terminate the string
-                    *bufp = '\0';
+    j = 0;
+    count = 0;
+    bufp = buffer;
+
+    for (it = input.begin(); it != input.end(); it++) {
+        *bufp = *it;
+        if (count) {
+            if (*bufp == opener) {
+                count++;
+            } else if (*bufp == closer && count > 1) {
+                count--;
+            } else if (*bufp == closer) {
+                // overwrite last character to NULL-terminate the string
+                *bufp = '\0';
+                c150debug->printf(C150RPCDEBUG,"Finished param %d: %s", j, buffer);
+                count = 0;
+                bufp = buffer;
+                if (j == i) {
+                    return string(buffer);
+                }
+                j++;
+                continue;
+            }
+            bufp++;
+        } else {
+            count = 1;
+            switch (*bufp) {
+                case '{':
+                    opener = '{';
+                    closer = '}';
                     break;
-                }
-            } else {
-                count = 1;
-                switch (*bufp) {
-                    case '{':
-                        opener = '{';
-                        closer = '}';
-                        break;
-                    case '[':
-                        opener = '[';
-                        closer = ']';
-                        break;
-                    case '(':
-                        opener = '(';
-                        closer = ')';
-                        break;
-                    default:
-                        count = 0;
-                }
+                case '[':
+                    opener = '[';
+                    closer = ']';
+                    break;
+                case '(':
+                    opener = '(';
+                    closer = ')';
+                    break;
+                default:
+                    count = 0;
             }
         }
-        c150debug->printf(C150RPCDEBUG,"{{ filename }}.{{ agent }}: reached end of string");
-        c150debug->printf(C150RPCDEBUG,"THE STRING BUFFER IS %s",string(buffer));
-        throw C150Exception("{{ filename }}.{{ agent }}: unmatched brackets detected");
-        
-    } 
-    return string(buffer);
+    }
+    c150debug->printf(C150RPCDEBUG,"{{ filename }}.{{ agent }}: reached end of string");
+    c150debug->printf(C150RPCDEBUG,"THE STRING BUFFER IS %s", buffer);
+    throw C150Exception("{{ filename }}.{{ agent }}: unmatched brackets detected");
+    return "you failed";
 }
 
 string serialize_float(float n) {
-    return to_string(n);
+    return "(" + to_string(n) + ")";
 }
 
 string serialize_int(int n) {
-    return to_string(n);
+    return "(" + to_string(n) + ")";
 }
 
 string serialize_string(string s) {

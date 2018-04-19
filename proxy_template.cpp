@@ -8,7 +8,7 @@
 {% for f, signature in funcs.iteritems() %}
 {{ signature['return_type'] }} {{ f }}({{ signature['arguments'] | map('render_param', types) | join(', ') }}) {
     char readBuffer[1024];
-    string payload = "{{ f }}";
+    string payload = "{{ f }} ";
     {%- for arg in signature['arguments'] %}
     payload += serialize_{{ arg['type'] | escape_declaration }}({{ arg['name'] }});
     {%- if not loop.last %}
@@ -27,8 +27,9 @@
         throw C150Exception("{{ filename }}.proxy.cpp: {{ f }}() received invalid response from the server");
     }
     {%- if signature['return_type'] != 'void' %}
-
-    return deserialize_{{ signature['return_type'] | escape_declaration }}(readBuffer);
+    string response(readBuffer);
+    char buffer[4096];
+    return deserialize_{{ signature['return_type'] | escape_declaration }}(get_param(0, buffer, sizeof(buffer), response));
     {%- endif %}
 }
 {% endfor %}

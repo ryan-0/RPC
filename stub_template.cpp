@@ -41,28 +41,25 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
     bufp = buffer;
     for (i = 0; i < bufSize; i++) {
         readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
-
-
-        //added this to fix buffer bug
-        if(*bufp == ' '){
-            readnull = true;
-            break;
-        }
         // check for EOF or error
         if (readlen == 0) {
             break;
         }
+
         // check for null and bump buffer pointer
-        if (*bufp++ == '\0') {
+        if (*bufp == '\0' || *bufp == ' ') {
             readnull = true;
+            *bufp = '\0';
             break;
         }
+        bufp++;
 
     }
     if (readlen == 0) {
         c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub: read zero length message, checking EOF");
         if (RPCSTUBSOCKET-> eof()) {
             c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub: EOF signaled on input");
+            buffer[0] = '\0';
         } else {
             throw C150Exception("{{filename }}.stub: unexpected zero length read without eof");
         }
@@ -76,16 +73,21 @@ void dispatchFunction() {
     char argsBuffer[1060];
 
     getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
+    if (functionNameBuffer[0] == '\0') {
+        return;
+    }
     RPCSTUBSOCKET->read(argsBuffer,sizeof(argsBuffer));
+
+    c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub.cpp: read in |%s|", argsBuffer);
     string input(argsBuffer);
     memset(argsBuffer, 0, sizeof(argsBuffer));
     c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: THE FUNCTION NAME IS  %s()",functionNameBuffer);
     {%- for f, signature in funcs.iteritems() %} 
     {%- if loop.first %}
     //need to fix this extra space bug (its fixed, but space should be removed in the first place)
-    if (strcmp(functionNameBuffer, "{{ f }} ") == 0) {
+    if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
     {%- else %}
-    } else if (strcmp(functionNameBuffer, "{{ f}} ") == 0) {
+    } else if (strcmp(functionNameBuffer, "{{ f}}") == 0) {
     {%- endif %}
         {%- for arg in signature['arguments'] %}
         {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input));
