@@ -1,19 +1,8 @@
 {%- extends 'base_template.cpp' %}
 
 {%- set agent = 'stub' %}
-
-
-{%- block declarations %}
-
-{%- for t, _ in return_types.iteritems() | reject('builtin') %}
-string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | render_param(types) }});
-{%- endfor %}
-
-{%- for t, _ in types.iteritems() | reject('builtin') %}
-{{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s);
-{%- endfor %}
-
-{%- endblock %}
+{%- set serializers = return_types %}
+{%- set deserializers = types %}
 
 
 {%- block functions %}

@@ -1,15 +1,8 @@
 {%- extends 'base_template.cpp' %}
 
 {%- set agent = 'proxy' %}
-
-{% block declarations %}
-{% for t, _ in types.iteritems() | reject('builtin') %}
-string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | render_param(types) }});
-{%- endfor %}
-{%- for t, _ in return_types.iteritems() | reject('builtin') %}
-{{ t }} deserialize_{{ t | escape_declaration }}(string s);
-{%- endfor %}
-{% endblock %}
+{%- set serializers = return_types %}
+{%- set deserializers = types %}
 
 {% block functions %}
 {% for f, signature in funcs.iteritems() %}
@@ -39,45 +32,4 @@ string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | rend
     {%- endif %}
 }
 {% endfor %}
-{% endblock %}
-
-{% block definitions %}
-{% for name, definition in types.iteritems() | reject('builtin')  %}
-string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} | render_param(types) }}) {
-    string s = "";
-    {%- if definition['type_of_type'] == 'array' %}
-    s += "[";
-    for (int i = 0; i < {{ definition['element_count'] }}; i++) {
-        s += serialize_{{ definition['member_type'] | escape_declaration }}(x[i]);
-        if (i < {{ definition['element_count'] | int - 1}}) {
-            s += ",";
-        }
-    }
-    s += "[";
-    {%- else %}
-    s += "{";
-    {%- for mem in definition['members'] %}
-    s += serialize_{{ mem['type'] | escape_declaration }}(x.{{ mem['name'] }});
-    {%- if not loop.last %}
-    s += ",";
-    {%- endif %}
-    {%- endfor %}
-    s += "}";
-    {%- endif %}
-    return s;
-}
-{% endfor %}
-{%- for t, definition in return_types.iteritems() | reject('builtin') %}
-{{ t }} deserialize_{{ t | escape_declaration }}(string s) {
-    {%- if definition['type_of_type'] == 'array' %}
-        {# TODO: handle case of  deserializing arbitrary array #}
-    {%- else %}
-    {{ t }} x;
-    {%- for mem in definition['members'] %}
-    x.{{ mem['name'] }} = deserialize_{{ mem['type'] | escape_declaration }}(s);
-    {%- endfor %}
-    return x;
-    {%- endif %}
-}
-{%- endfor %}
 {% endblock %}
