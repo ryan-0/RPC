@@ -35,9 +35,11 @@ string func1(string x, string y) {
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: func1() invoked");
 }
 
-void func2() {
+string func2(int x, int z) {
+  string retval = to_string(z + x);
   printf("func2() invoked\n");				  
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: func2() invoked");
+  return retval;
 }
 
 void func3() {

@@ -126,8 +126,8 @@ main(int argc, char *argv[]) {
        // Call (possibly remote) func2
        //
        printf("Calling func2()\n");
-       func2();                          // remote call (we hope!)
-       printf("Returned from func2()\n");
+       retval = func2(2, 4);                          // remote call (we hope!)
+       printf("Returned from func2() with return %s \n", retval.c_str());
 
        // 
        // Call (possibly remote) func3
