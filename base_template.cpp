@@ -19,9 +19,7 @@ string get_param(int i, char *buffer, unsigned int bufSize, string input) {
     for (it = input.begin(); it != input.end(); it++) {
         *bufp = *it;
         if (count) {
-            if (*bufp == opener) {
-                count++;
-            } else if (*bufp == closer && count > 1) {
+            if (*bufp == closer && count > 1) {
                 count--;
             } else if (*bufp == closer) {
                 // overwrite last character to NULL-terminate the string
@@ -34,7 +32,9 @@ string get_param(int i, char *buffer, unsigned int bufSize, string input) {
                 }
                 j++;
                 continue;
-            }
+            } else if (*bufp == opener) {
+                    count++;
+                }
             bufp++;
         } else {
             count = 1;
@@ -50,6 +50,10 @@ string get_param(int i, char *buffer, unsigned int bufSize, string input) {
                 case '(':
                     opener = '(';
                     closer = ')';
+                    break;
+                case '\037':
+                    opener = '\037';
+                    closer = '\037';
                     break;
                 default:
                     count = 0;
@@ -71,7 +75,7 @@ string serialize_int(int n) {
 }
 
 string serialize_string(string s) {
-    return s;
+    return '\037' + s + '\037';
 }
 
 float deserialize_float(string s) {

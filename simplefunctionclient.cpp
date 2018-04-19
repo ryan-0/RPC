@@ -45,6 +45,9 @@
 // AND STUBS, AND ALSO USED AS INPUT TO AUTOMATIC PROXY/STUB
 // GENERATOR PROGRAM
 
+
+#include <string>
+using namespace std;
 #include "simplefunction.idl"
 
 #include "rpcproxyhelper.h"
@@ -114,9 +117,10 @@ main(int argc, char *argv[]) {
        // 
        // Call (possibly remote) func1
        //
+       string retval;
        printf("Calling func1()\n");
-       func1();                          // remote call (we hope!)
-       printf("Returned from func1()\n");
+       retval = func1("arg1","arg2");                          // remote call (we hope!)
+       printf("Returned from func1() with return %s \n", retval.c_str());
 
        // 
        // Call (possibly remote) func2

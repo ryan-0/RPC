@@ -17,6 +17,9 @@
 // TO THE FUNCTIONS WE'RE IMPLEMENTING. THIS MAKES SURE THE
 // CODE HERE ACTUALLY MATCHES THE REMOTED INTERFACE
 
+#include <string>
+using namespace std;
+
 #include "simplefunction.idl"
 
 #include <cstdio>
@@ -25,8 +28,10 @@
 using namespace C150NETWORK;  // for all the comp150 utilities 
 
 
-void func1() {
+string func1(string x, string y) {
   printf("func1() invoked\n");
+  string retval = x + y;
+  return retval;
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: func1() invoked");
 }
 
