@@ -120,9 +120,6 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
     s += "{";
     {%- for mem in definition['members'] %}
     s += serialize_{{ mem['type'] | escape_declaration }}(x.{{ mem['name'] }});
-    {%- if not loop.last %}
-    s += ",";
-    {%- endif %}
     {%- endfor %}
     s += "}";
     {%- endif %}
@@ -135,9 +132,10 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
     {%- if definition['type_of_type'] == 'array' %}
         {# TODO: handle case of  deserializing arbitrary array #}
     {%- else %}
+    char buffer[4096];
     {{ t }} x;
     {%- for mem in definition['members'] %}
-    x.{{ mem['name'] }} = deserialize_{{ mem['type'] | escape_declaration }}(s);
+    x.{{ mem['name'] }} = deserialize_{{ mem['type'] | escape_declaration }}(get_param({{ loop.index0 }}, buffer, sizeof(buffer), s));
     {%- endfor %}
     return x;
     {%- endif %}
