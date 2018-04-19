@@ -21,11 +21,11 @@
     RPCPROXYSOCKET->write(payload.c_str(), payload.length() + 1);
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.proxy.cpp: {{ f }}() invocation sent, waiting for response");
     RPCPROXYSOCKET->read(readBuffer, sizeof(readBuffer));
-
-    // TODO: check for real error case
-    if (0) {
+    // raise Exception if the DONE sentinel is not in the buffer
+    if (!strstr(readBuffer, "DONE")) {
         throw C150Exception("{{ filename }}.proxy.cpp: {{ f }}() received invalid response from the server");
     }
+
     {%- if signature['return_type'] != 'void' %}
     string response(readBuffer);
     char buffer[4096];

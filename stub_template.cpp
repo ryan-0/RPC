@@ -89,10 +89,14 @@ void dispatchFunction() {
     {%- else %}
     } else if (strcmp(functionNameBuffer, "{{ f}}") == 0) {
     {%- endif %}
+        try {
         {%- for arg in signature['arguments'] %}
-        {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input));
+            {{ arg | render_param(types) }} = deserialize_{{ signature['return_type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input));
         {%- endfor %}
-        __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
+            __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
+        } catch (...) { 
+            __badFunction(functionNameBuffer);
+        }
     {%- endfor %}
     } else {
         __badFunction(functionNameBuffer);
