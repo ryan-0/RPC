@@ -95,7 +95,11 @@ string serialize_{{ t | escape_declaration }}({{ {'name': 'x', 'type': t} | rend
 {%- endfor %}
 
 {%- for t, _ in deserializers.iteritems() | reject('builtin') %}
+{% if types[t]['type_of_type'] == 'array' %}
+void deserialize_{{ t | escape_declaration }}(string s, {{ {'name': 'arr', 'type': t} | render_param(types) }});
+{% else %}
 {{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s);
+{% endif %}
 {%- endfor %}
 
 {% block functions %}
@@ -111,9 +115,6 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
     s += "[";
     for (int i = 0; i < {{ definition['element_count'] }}; i++) {
         s += serialize_{{ definition['member_type'] | escape_declaration }}(x[i]);
-        if (i < {{ definition['element_count'] | int - 1}}) {
-            s += ",";
-        }
     }
     s += "[";
     {%- else %}
@@ -128,14 +129,26 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
 {% endfor %}
 
 {%- for t, definition in deserializers.iteritems() | reject('builtin') %}
+{%- if definition['type_of_type'] == 'array' %}
+void deserialize_{{ t | escape_declaration }}(string s, {{ {'name': 'arr', 'type': t} | render_param(types) }}) {
+    char buffer[4096];
+    for (int i = 0; i < {{ definition['element_count'] }}; i++) {
+        {%- if types[definition['member_type']]['type_of_type'] == 'array'%}
+        deserialize_{{ definition['member_type'] | escape_declaration }}(get_param(i, buffer, sizeof(buffer), s), arr[i]);
+        {%- else %}
+        arr[i] = deserialize_{{ definition['member_type'] | escape_declaration }}(get_param(i, buffer, sizeof(buffer), s));
+        {%- endif %}
+    }
+{%- else %}
 {{ t | render_return_type(types) }}deserialize_{{ t | escape_declaration }}(string s) {
-    {%- if definition['type_of_type'] == 'array' %}
-        {# TODO: handle case of  deserializing arbitrary array #}
-    {%- else %}
     char buffer[4096];
     {{ t }} x;
     {%- for mem in definition['members'] %}
+    {%- if types[mem['type']]['type_of_type'] == 'array' %}
+    deserialize_{{ mem['type'] | escape_declaration }}(get_param({{ loop.index0 }}, buffer, sizeof(buffer), s), x.{{ mem['name'] }});
+    {%- else %}
     x.{{ mem['name'] }} = deserialize_{{ mem['type'] | escape_declaration }}(get_param({{ loop.index0 }}, buffer, sizeof(buffer), s));
+    {%- endif %}
     {%- endfor %}
     return x;
     {%- endif %}

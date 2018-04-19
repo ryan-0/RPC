@@ -1,8 +1,8 @@
 {%- extends 'base_template.cpp' %}
 
 {%- set agent = 'proxy' %}
-{%- set serializers = return_types %}
-{%- set deserializers = types %}
+{%- set serializers = types %}
+{%- set deserializers = return_types %}
 
 {% block functions %}
 {% for f, signature in funcs.iteritems() %}

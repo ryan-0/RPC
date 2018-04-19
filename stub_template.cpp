@@ -87,11 +87,16 @@ void dispatchFunction() {
     //need to fix this extra space bug (its fixed, but space should be removed in the first place)
     if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
     {%- else %}
-    } else if (strcmp(functionNameBuffer, "{{ f}}") == 0) {
+    } else if (strcmp(functionNameBuffer, "{{ f }}") == 0) {
     {%- endif %}
         try {
         {%- for arg in signature['arguments'] %}
+            {%- if types[arg['type']]['type_of_type'] == 'array' %}
+            {{ arg | render_param(types) }};
+            deserialize_{{ arg['type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input), {{ arg['name'] }});
+            {%- else %}
             {{ arg | render_param(types) }} = deserialize_{{ arg['type'] | escape_declaration }}(get_param({{ loop.index0 }}, argsBuffer, sizeof(argsBuffer), input));
+            {%- endif %}
         {%- endfor %}
             __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
         } catch (...) { 
