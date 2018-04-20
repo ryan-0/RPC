@@ -46,8 +46,14 @@ void func3() {
   printf("func3() invoked\n");
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: func3() invoked");
 }
-int takesTwoArrays(int x[2], int y[2][2]){
-  int retval = x[0] + y[0][0] + y[1][1];
+int takesTwoArrays(rectangle s[2], int y){
+  int retval = s[0].x + s[1].y + y;
+  c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: takesTWoArrays() invoked");
+  return retval;
+}
+
+int takesTwoShapes(shape shapes, rectangle square){
+  int retval = shapes.c.pi + shapes.o.x + square.x; //should return 3 + 2 + 10
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: takesTWoArrays() invoked");
   return retval;
 }

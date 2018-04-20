@@ -141,10 +141,26 @@ main(int argc, char *argv[]) {
        // Call takes2arrays
        //
        printf("Calling takesTwoArrays()\n");
-       int x[] = {2, 5};
-       int y[] = {10, 100};
-       int retint = takesTwoArrays(x, y);                          // remote call (we hope!)
-       printf("Returned from func2() with return %i \n", retint);
+       rectangle r;
+       r.x = 7;
+       r.y = 8;
+       rectangle s;
+       s.x = 2;
+       s.y = 2;
+       rectangle x[] = {r,s};
+       shape shapes;
+       circle circles;
+       circles.pi = 3;
+       oval ovals;
+       ovals.x = 10;
+       ovals.y = 20;
+       shapes.c = circles;
+       shapes.o =  ovals;
+       //int y[][2] = {{2, 5}, {2, 5}};
+       int retint = takesTwoArrays(x, 2);                          // remote call (we hope!)
+       printf("Returned from takeTwoArrays with return %i \n", retint);
+       int ret = takesTwoShapes(shapes, s);                          // remote call (we hope!)
+       printf("Returned from takeTwoArrays with return %i \n", ret);
      }
 
      //
