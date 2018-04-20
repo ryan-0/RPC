@@ -61,9 +61,8 @@ string get_param(int i, char *buffer, unsigned int bufSize, string input) {
         }
     }
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.{{ agent }}: reached end of string");
-    c150debug->printf(C150RPCDEBUG,"THE STRING BUFFER IS %s", buffer);
     throw C150Exception("{{ filename }}.{{ agent }}: unmatched brackets detected");
-    return "you failed";
+    return "BAD";
 }
 
 string serialize_float(float n) {

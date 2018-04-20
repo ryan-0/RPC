@@ -10,6 +10,7 @@
 void __{{ f }}({{ signature['arguments'] | map('render_param', types) | join(', ') }}) {
     string payload = "DONE";
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub.cpp: invoking {{ f }}()");
+    *GRADING << "{{ filename }}.proxy.cpp: {{ f }}() invocation sent, waiting for response" << endl;
     {% if signature['return_type'] != 'void' %}
     {{ signature['return_type'] }} result;
     result = {{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
@@ -18,6 +19,7 @@ void __{{ f }}({{ signature['arguments'] | map('render_param', types) | join(', 
     {{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
     {% endif %}
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub.cpp: returned from {{ f }}() -- responding to client");
+    *GRADING << "{{ filename }}.stub.cpp: returned from {{ f }}() -- responding to client" << endl;
     RPCSTUBSOCKET->write(payload.c_str(), payload.length());
 }
 {%- endfor %}
@@ -28,6 +30,7 @@ void __{{ f }}({{ signature['arguments'] | map('render_param', types) | join(', 
 void __badFunction(char *functionName) {
     char doneBuffer[5] = "BAD";  // to write magic value DONE + null
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub.cpp: received call for nonexistent function %s()",functionName);
+    *GRADING << "{{ filename }}.stub.cpp: received call for nonexistent function" << functionName << "()" <<endl;
     RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
 }
 
@@ -57,7 +60,9 @@ void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
     }
     if (readlen == 0) {
         c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub: read zero length message, checking EOF");
+        *GRADING << "{{ filename }}.stub: read zero length message, checking EOF" << endl;
         if (RPCSTUBSOCKET-> eof()) {
+            *GRADING << "{{ filename }}.stub: EOF signaled on input" << endl;
             c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub: EOF signaled on input");
             buffer[0] = '\0';
         } else {
@@ -79,9 +84,9 @@ void dispatchFunction() {
     RPCSTUBSOCKET->read(argsBuffer,sizeof(argsBuffer));
 
     c150debug->printf(C150RPCDEBUG,"{{ filename }}.stub.cpp: read in |%s|", argsBuffer);
+    *GRADING << "{{ filename }}.stub.cpp: read in |"<<argsBuffer << "|" << endl;
     string input(argsBuffer);
     memset(argsBuffer, 0, sizeof(argsBuffer));
-    c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: THE FUNCTION NAME IS  %s()",functionNameBuffer);
     {%- for f, signature in funcs.iteritems() %} 
     {%- if loop.first %}
     //need to fix this extra space bug (its fixed, but space should be removed in the first place)
@@ -100,7 +105,6 @@ void dispatchFunction() {
         {%- endfor %}
             __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
         } catch (...) { 
-            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
             __badFunction(functionNameBuffer);
         }
     {%- endfor %}
