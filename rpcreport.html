@@ -112,7 +112,9 @@ RPC Project Report
 <ol class="qa">
 <li class="q">Did you implement an rpcgenerate program and does it handle all legal IDL files? If not, which test cases should we try in your submission  directory?</li>
 <li class="a">
-
+  Our program should work with all legal IDL. We tested atomic datatypes and complex datatypes:
+  arrays, structs, arrays of arrays (nested arrays), and structs of structs, arrays of structs, structs of arrays. 
+  Those all seemed to work but we aknowledge that out tests were not fully exhaustive. However, to the best of our knowledge, it should all work.
 </li>
 
 <li class="q">What programming language did you use for your rpcgenerate program?</li>
@@ -142,7 +144,7 @@ escape our separators. JSON for example uses quotes to enclose strings and then 
 challenging characters.
 </p>
 <p>
-Parameters are passed as strings. We convert ints and float to strings usinng the to_string function
+Parameters are passed as strings. We convert ints and float to strings using the to_string function
 and then decode them with stoi and stof, respectively. All "top-level" parameters are enclosed
 in their own set of separator. So even a complex parameter like a struct with arrays would all
 be enclosed in "{" and "}". For arrays and structs, we recursively parse "parameters" within
@@ -152,7 +154,7 @@ gets a dynamically created serializer and deserializer.
 <p>
 We structured our code with the Jinja templating language, which is availalbe as as a package
 on the Halligan computers. Most of our rpcgenerate just passes an environment into the template
-renderer and allows the template to determine what to do. The template for the stub will 
+renderer and allows the template to determine what to do. A couple invariants make our code easier such as always converting everything to a string in a JSON-like format.
 </p>
 </li>
 
