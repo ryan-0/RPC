@@ -116,7 +116,7 @@ string serialize_{{ name | escape_declaration }}({{ {'name': 'x', 'type': name} 
     for (int i = 0; i < {{ definition['element_count'] }}; i++) {
         s += serialize_{{ definition['member_type'] | escape_declaration }}(x[i]);
     }
-    s += "[";
+    s += "]";
     {%- else %}
     s += "{";
     {%- for mem in definition['members'] %}

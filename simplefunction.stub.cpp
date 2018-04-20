@@ -1,258 +1,256 @@
-// --------------------------------------------------------------
-//
-//                        simplefunction.stub.cpp
-//
-//        Author: Noah Mendelsohn         
-//   
-//       This is a hand-crafted demonstration stub.
-//
-//       It implements a very simple protocol that works only
-//       for functions with no arguments and void return. Invocation
-//       requests are just the null terminated function name; 
-//       Responses are the null terminated words DONE or BAD.
-//       You'll have to do something much more sophisticated
-//       for routines that accept and return values. (And you might
-//       not want to use nulls as delimiters in your protocol, since
-//       some of the values you send might contain them!)
-//
-//       For your project, your "rpcgen" program will generate
-//       stubs like this one automatically from the idl
-//       file. Note that this stub also #includes the 
-//       simplefunctions.idl file. Of course, your rpcgen
-//       program will change that, as well as the number
-//       of functions generated. More importantly, it will
-//       generate code to handle function arguments and
-//       return values.
-//
-//       You can structure your stub however you like. This
-//       one relies on the container to loop calling 
-//       dispatchFunction() until eof is reached, but you
-//       can do it other ways. In general, there needs to
-//       be some place where you read the stream to see
-//       which function to call; how you do that is up to you.
-//
-//       Copyright: 2012 Noah Mendelsohn
-//
-// --------------------------------------------------------------
-
-// IMPORTANT! WE INCLUDE THE IDL FILE AS IT DEFINES THE INTERFACES
-// TO THE FUNCTIONS WE'RE IMPLEMENTING. THIS MAKES SURE THE
-// CODE HERE ACTUALLY MATCHES THE REMOTED INTERFACE
-
-#include "simplefunction.idl"
-
-#include "rpcstubhelper.h"
-
 #include <cstdio>
 #include <cstring>
 #include "c150debug.h"
+#include "rpcstubhelper.h"
+#include "simplefunction.idl"
 
-using namespace C150NETWORK;  // for all the comp150 utilities 
+using namespace C150NETWORK;
 
-void getFunctionNamefromStream();
+string get_param(int i, char *buffer, unsigned int bufSize, string input) {
+    unsigned int count;
+    string::iterator it;
+    char opener, closer, *bufp;
+    int j;
 
-// ======================================================================
-//                             STUBS
-//
-//    Each of these is generated to match the signature of the 
-//    function for which it is a stub. The names are prefixed with "__"
-//    to keep them distinct from the actual routines, which we call!
-//
-//    Note that when functions take arguments, these are the routines
-//    that will read them from the input stream. These routines should
-//    be generated dynamically from your rpcgen program (and so should the
-//    code above).
-//
-// ======================================================================
-  
+    j = 0;
+    count = 0;
+    bufp = buffer;
 
-
-void __func1() {
-  char doneBuffer[5] = "DONE";  // to write magic value DONE + null
-
-  //
-  // Time to actually call the function 
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func1()");
-  func1();
-
-  //
-  // Send the response to the client
-  //
-  // If func1 returned something other than void, this is
-  // where we'd send the return value back.
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from  func1() -- responding to client");
-  RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
+    for (it = input.begin(); it != input.end(); it++) {
+        *bufp = *it;
+        if (count) {
+            if (*bufp == closer && count > 1) {
+                count--;
+            } else if (*bufp == closer) {
+                // overwrite last character to NULL-terminate the string
+                *bufp = '\0';
+                c150debug->printf(C150RPCDEBUG,"Finished param %d: %s", j, buffer);
+                count = 0;
+                bufp = buffer;
+                if (j == i) {
+                    return string(buffer);
+                }
+                j++;
+                continue;
+            } else if (*bufp == opener) {
+                    count++;
+                }
+            bufp++;
+        } else {
+            count = 1;
+            switch (*bufp) {
+                case '{':
+                    opener = '{';
+                    closer = '}';
+                    break;
+                case '[':
+                    opener = '[';
+                    closer = ']';
+                    break;
+                case '(':
+                    opener = '(';
+                    closer = ')';
+                    break;
+                case '\037':
+                    opener = '\037';
+                    closer = '\037';
+                    break;
+                default:
+                    count = 0;
+            }
+        }
+    }
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub: reached end of string");
+    c150debug->printf(C150RPCDEBUG,"THE STRING BUFFER IS %s", buffer);
+    throw C150Exception("simplefunction.stub: unmatched brackets detected");
+    return "you failed";
 }
 
-void __func2() {
-  char doneBuffer[5] = "DONE";  // to write magic value DONE + null
-
-  //
-  // Time to actually call the function 
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func2()");
-  func2();
-
-  //
-  // Send the response to the client
-  //
-  // If func2 returned something other than void, this is
-  // where we'd send the return value back.
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from  func2() -- responding to client");
-  RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
+string serialize_float(float n) {
+    return "(" + to_string(n) + ")";
 }
+
+string serialize_int(int n) {
+    return "(" + to_string(n) + ")";
+}
+
+string serialize_string(string s) {
+    return '\037' + s + '\037';
+}
+
+float deserialize_float(string s) {
+    return stof(s, NULL);
+}
+
+float deserialize_int(string s) {
+    return stoi(s, NULL);
+}
+
+string deserialize_string(string s) {
+    return s;
+}
+
+void deserialize___int_2__2_(string s, int arr[2][2]);
+
+
+void deserialize___int_2_(string s, int arr[2]);
+
+
 
 void __func3() {
-  char doneBuffer[5] = "DONE";  // to write magic value DONE + null
-
-  //
-  // Time to actually call the function 
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func3()");
-  func3();
-
-  //
-  // Send the response to the client
-  //
-  // If func3 returned something other than void, this is
-  // where we'd send the return value back.
-  //
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from  func3() -- responding to client");
-  RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
+    string payload = "DONE";
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func3()");
+    
+    func3();
+    
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from func3() -- responding to client");
+    RPCSTUBSOCKET->write(payload.c_str(), payload.length());
+}
+void __func2(int x, int y) {
+    string payload = "DONE";
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func2()");
+    
+    string result;
+    result = func2(x, y);
+    payload = serialize_string(result) + " " + payload;
+    
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from func2() -- responding to client");
+    RPCSTUBSOCKET->write(payload.c_str(), payload.length());
+}
+void __func1(string x, string y) {
+    string payload = "DONE";
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking func1()");
+    
+    string result;
+    result = func1(x, y);
+    payload = serialize_string(result) + " " + payload;
+    
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from func1() -- responding to client");
+    RPCSTUBSOCKET->write(payload.c_str(), payload.length());
+}
+void __takesTwoArrays(int x[2], int y[2][2]) {
+    string payload = "DONE";
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: invoking takesTwoArrays()");
+    
+    int result;
+    result = takesTwoArrays(x, y);
+    payload = serialize_int(result) + " " + payload;
+    
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: returned from takesTwoArrays() -- responding to client");
+    RPCSTUBSOCKET->write(payload.c_str(), payload.length());
 }
 
-
-//
-//     __badFunction
-//
-//   Pseudo-stub for missing functions.
-//
 
 void __badFunction(char *functionName) {
-  char doneBuffer[5] = "BAD";  // to write magic value DONE + null
-
-
-  //
-  // Send the response to the client indicating bad function
-  //
-
-  c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: received call for nonexistent function %s()",functionName);
-  RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
+    char doneBuffer[5] = "BAD";  // to write magic value DONE + null
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: received call for nonexistent function %s()",functionName);
+    RPCSTUBSOCKET->write(doneBuffer, strlen(doneBuffer)+1);
 }
 
+void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
+    unsigned int i;
+    char *bufp;
+    bool readnull;
+    ssize_t readlen;  
 
+    readnull = false;
+    bufp = buffer;
+    for (i = 0; i < bufSize; i++) {
+        readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
+        // check for EOF or error
+        if (readlen == 0) {
+            break;
+        }
 
-// ======================================================================
-//
-//                        COMMON SUPPORT FUNCTIONS
-//
-// ======================================================================
+        // check for null and bump buffer pointer
+        if (*bufp == '\0' || *bufp == ' ') {
+            readnull = true;
+            *bufp = '\0';
+            break;
+        }
+        bufp++;
 
-// forward declaration
-void getFunctionNameFromStream(char *buffer, unsigned int bufSize);
-
-
-
-//
-//                         dispatchFunction()
-//
-//   Called when we're ready to read a new invocation request from the stream
-//
+    }
+    if (readlen == 0) {
+        c150debug->printf(C150RPCDEBUG,"simplefunction.stub: read zero length message, checking EOF");
+        if (RPCSTUBSOCKET-> eof()) {
+            c150debug->printf(C150RPCDEBUG,"simplefunction.stub: EOF signaled on input");
+            buffer[0] = '\0';
+        } else {
+            throw C150Exception("simplefunction.stub: unexpected zero length read without eof");
+        }
+    } else if (!readnull) {
+        throw C150Exception("simplefunction.stub: method name not null terminated or too long");
+    }
+}
 
 void dispatchFunction() {
+    char functionNameBuffer[50];
+    char argsBuffer[1060];
 
-
-  char functionNameBuffer[50];
-
-  //
-  // Read the function name from the stream -- note
-  // REPLACE THIS WITH YOUR OWN LOGIC DEPENDING ON THE 
-  // WIRE FORMAT YOU USE
-  //
-  getFunctionNameFromStream(functionNameBuffer,sizeof(functionNameBuffer));
-
-  //
-  // We've read the function name, call the stub for the right one
-  // The stub will invoke the function and send response.
-  //
-
-  if (!RPCSTUBSOCKET-> eof()) {
-    if (strcmp(functionNameBuffer,"func1") == 0)
-      __func1();
-    else   if (strcmp(functionNameBuffer,"func2") == 0)
-      __func2();
-    else   if (strcmp(functionNameBuffer,"func3") == 0)
-      __func3();
-    else
-      __badFunction(functionNameBuffer);
-  }
-}
-
- 
-//
-//                   getFunctionNamefromStream
-//
-//   Helper routine to read function name from the stream. 
-//   Note that this code is the same for all stubs, so can be generated
-//   as boilerplate.
-//
-//   Important: this routine must leave the sock open but at EOF
-//   when eof is read from client.
-//
-void getFunctionNameFromStream(char *buffer, unsigned int bufSize) {
-  unsigned int i;
-  char *bufp;    // next char to read
-  bool readnull;
-  ssize_t readlen;             // amount of data read from socket
-  
-  //
-  // Read a message from the stream
-  // -1 in size below is to leave room for null
-  //
-  readnull = false;
-  bufp = buffer;
-  for (i=0; i< bufSize; i++) {
-    readlen = RPCSTUBSOCKET-> read(bufp, 1);  // read a byte
-    // check for eof or error
-    if (readlen == 0) {
-      break;
+    getFunctionNameFromStream(functionNameBuffer, sizeof(functionNameBuffer));
+    if (functionNameBuffer[0] == '\0') {
+        return;
     }
-    // check for null and bump buffer pointer
-    if (*bufp++ == '\0') {
-      readnull = true;
-      break;
-    }
-  }
-  
-  //
-  // With TCP streams, we should never get a 0 length read
-  // except with timeouts (which we're not setting in pingstreamserver)
-  // or EOF
-  //
-  if (readlen == 0) {
-    c150debug->printf(C150RPCDEBUG,"simplefunction.stub: read zero length message, checking EOF");
-    if (RPCSTUBSOCKET-> eof()) {
-      c150debug->printf(C150RPCDEBUG,"simplefunction.stub: EOF signaled on input");
+    RPCSTUBSOCKET->read(argsBuffer,sizeof(argsBuffer));
 
+    c150debug->printf(C150RPCDEBUG,"simplefunction.stub.cpp: read in |%s|", argsBuffer);
+    string input(argsBuffer);
+    memset(argsBuffer, 0, sizeof(argsBuffer));
+    c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: THE FUNCTION NAME IS  %s()",functionNameBuffer);
+    //need to fix this extra space bug (its fixed, but space should be removed in the first place)
+    if (strcmp(functionNameBuffer, "func3") == 0) {
+        try {
+            __func3();
+        } catch (...) { 
+            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
+            __badFunction(functionNameBuffer);
+        }
+    } else if (strcmp(functionNameBuffer, "func2") == 0) {
+        try {
+            int x = deserialize_int(get_param(0, argsBuffer, sizeof(argsBuffer), input));
+            int y = deserialize_int(get_param(1, argsBuffer, sizeof(argsBuffer), input));
+            __func2(x, y);
+        } catch (...) { 
+            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
+            __badFunction(functionNameBuffer);
+        }
+    } else if (strcmp(functionNameBuffer, "func1") == 0) {
+        try {
+            string x = deserialize_string(get_param(0, argsBuffer, sizeof(argsBuffer), input));
+            string y = deserialize_string(get_param(1, argsBuffer, sizeof(argsBuffer), input));
+            __func1(x, y);
+        } catch (...) { 
+            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
+            __badFunction(functionNameBuffer);
+        }
+    } else if (strcmp(functionNameBuffer, "takesTwoArrays") == 0) {
+        try {
+            int x[2];
+            deserialize___int_2_(get_param(0, argsBuffer, sizeof(argsBuffer), input), x);
+            int y[2][2];
+            deserialize___int_2__2_(get_param(1, argsBuffer, sizeof(argsBuffer), input), y);
+            __takesTwoArrays(x, y);
+        } catch (...) { 
+            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
+            __badFunction(functionNameBuffer);
+        }
     } else {
-      throw C150Exception("simplefunction.stub: unexpected zero length read without eof");
+        __badFunction(functionNameBuffer);
     }
-  }
-
-  //
-  // If we didn't get a null, input message was poorly formatted
-  //
-  else if(!readnull) 
-    throw C150Exception("simplefunction.stub: method name not null terminated or too long");
-
-  
-  //
-  // Note that eof may be set here for our caller to check
-  //
-
 }
 
 
+
+void deserialize___int_2__2_(string s, int arr[2][2]) {
+    char buffer[4096];
+    for (int i = 0; i < 2; i++) {
+        deserialize___int_2_(get_param(i, buffer, sizeof(buffer), s), arr[i]);
+    }
+}
+void deserialize___int_2_(string s, int arr[2]) {
+    char buffer[4096];
+    for (int i = 0; i < 2; i++) {
+        arr[i] = deserialize_int(get_param(i, buffer, sizeof(buffer), s));
+    }
+}

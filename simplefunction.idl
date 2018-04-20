@@ -1,5 +1,5 @@
 string func1(string x, string y);
 string func2(int x, int y);
 void func3();
-int takesTwoArrays(int x[2], int y[2]);
+int takesTwoArrays(int x[2], int y[2][2]);
 
