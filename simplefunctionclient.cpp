@@ -150,7 +150,11 @@ main(int argc, char *argv[]) {
        rectangle x[] = {r,s};
        shape shapes;
        circle circles;
-       circles.pi = 3;
+       circles.pi[0] = 3;
+       circles.pi[1] = 1;
+       circles.pi[2] = 4;
+       circles.pi[3] = 2;
+       circles.pi[4] = 5;
        oval ovals;
        ovals.x = 10;
        ovals.y = 20;

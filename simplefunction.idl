@@ -3,7 +3,7 @@ string func2(int x, int y);
 void func3();
 struct rectangle {int x; int y;};
 struct oval {int x; int y;};
-struct circle {int pi;};
+struct circle {int pi[5];};
 struct shape {circle c; oval o;};
 int takesTwoArrays(rectangle r[2], int x);
 int takesTwoShapes(shape x, rectangle square);

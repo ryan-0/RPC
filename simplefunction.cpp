@@ -53,7 +53,9 @@ int takesTwoArrays(rectangle s[2], int y){
 }
 
 int takesTwoShapes(shape shapes, rectangle square){
-  int retval = shapes.c.pi + shapes.o.x + square.x; //should return 3 + 2 + 10
+  int retval = shapes.o.x + square.x; //should return 2 + 10
+  retval += shapes.c.pi[0]; //+3
+  retval += shapes.c.pi[4]; //+5
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: takesTWoArrays() invoked");
   return retval;
 }
