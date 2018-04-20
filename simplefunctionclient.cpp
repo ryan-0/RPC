@@ -135,6 +135,16 @@ main(int argc, char *argv[]) {
        printf("Calling func3()\n");
        func3();                          // remote call (we hope!)
        printf("Returned from func3()\n");
+
+
+       // 
+       // Call takes2arrays
+       //
+       printf("Calling takesTwoArrays()\n");
+       int x[] = {2, 5};
+       int y[] = {10, 100};
+       int retint = takesTwoArrays(x, y);                          // remote call (we hope!)
+       printf("Returned from func2() with return %i \n", retint);
      }
 
      //

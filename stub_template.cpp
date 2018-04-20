@@ -100,6 +100,7 @@ void dispatchFunction() {
         {%- endfor %}
             __{{ f }}({{ signature['arguments'] | map(attribute='name') | join(', ') }});
         } catch (...) { 
+            c150debug->printf(C150RPCDEBUG,"arithmetic.stub.cpp: ITS ACTUALLY HERE LOLS");
             __badFunction(functionNameBuffer);
         }
     {%- endfor %}

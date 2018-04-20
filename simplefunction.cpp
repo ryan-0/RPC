@@ -46,4 +46,9 @@ void func3() {
   printf("func3() invoked\n");
   c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: func3() invoked");
 }
+int takesTwoArrays(int x[2], int y[2]){
+  int retval = x[0] + y[1];
+  c150debug->printf(C150RPCDEBUG,"simplefunction.cpp: takesTWoArrays() invoked");
+  return retval;
+}
 
